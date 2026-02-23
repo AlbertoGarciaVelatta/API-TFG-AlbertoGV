@@ -1,0 +1,29 @@
+{
+  "name": "api-libros",
+  "version": "1.0.0",
+  "description": "API REST de libros con Node.js, Express y MongoDB",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "mongodb",
+    "mongoose",
+    "api-rest"
+  ],
+  "author": "Alberto García",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1",
+    "mongoose": "^7.8.9"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "type": "commonjs"
+}
