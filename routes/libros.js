@@ -3,7 +3,7 @@ const router = express.Router();
 const Libro = require("../models/libro");
 const getNextSequence = require("../helpers/getNextSequence");
 
-// GET todos los libros -> URL real: /api/libros
+// GET todos los libros
 router.get("/", async (req, res) => {
     try {
         const libros = await Libro.find(); 
@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     }
 });
 
-// GET un libro por ID -> URL real: /api/libros/:id
+// GET un libro por ID
 router.get("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {
@@ -25,7 +25,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// POST crear nuevo libro -> URL real: /api/libros
+// POST crear nuevo libro
 router.post("/", async (req, res) => {
     try {
         const nextId = await getNextSequence("librosid"); 
@@ -37,10 +37,15 @@ router.post("/", async (req, res) => {
     }
 });
 
-// POST añadir comentario -> URL real: /api/libros/:id/comentario
+// POST añadir comentario (CON VALIDACIÓN DE USUARIO)
 router.post("/:id/comentario", async (req, res) => {
     const id = parseInt(req.params.id);
     const { usuario, texto, estrellas } = req.body;
+
+    // Bloqueo de seguridad para evitar anónimos
+    if (!usuario || usuario.trim() === "" || usuario.toLowerCase() === "usuario anónimo") {
+        return res.status(401).json({ error: "Se requiere identificación real de Firebase" });
+    }
 
     try {
         const libro = await Libro.findOne({ id: id });
@@ -55,7 +60,7 @@ router.post("/:id/comentario", async (req, res) => {
 
         libro.comentarios.push(nuevoComentario);
 
-        // Recalcular promedios
+        // Recalcular puntuación media y número de críticas
         const totalEstrellas = libro.comentarios.reduce((acc, c) => acc + c.estrellas, 0);
         libro.puntuacionMedia = parseFloat((totalEstrellas / libro.comentarios.length).toFixed(1));
         libro.numeroCriticas = libro.comentarios.length;
@@ -63,12 +68,11 @@ router.post("/:id/comentario", async (req, res) => {
         await libro.save();
         res.status(201).json(libro);
     } catch (err) {
-        console.error("Error en POST comentario:", err);
         res.status(500).json({ error: "Error al añadir el comentario" });
     }
 });
 
-// PUT actualizar -> URL real: /api/libros/:id
+// PUT actualizar libro
 router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {
@@ -80,7 +84,7 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// DELETE eliminar -> URL real: /api/libros/:id
+// DELETE eliminar libro
 router.delete("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {
