@@ -3,7 +3,7 @@ const router = express.Router();
 const Libro = require("../models/libro");
 const getNextSequence = require("../helpers/getNextSequence");
 
-// 1. Obtener todos los libros -> URL: /api/libros
+// GET todos los libros -> URL real: /api/libros
 router.get("/", async (req, res) => {
     try {
         const libros = await Libro.find(); 
@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
     }
 });
 
-// 2. Obtener un libro por ID -> URL: /api/libros/:id
+// GET un libro por ID -> URL real: /api/libros/:id
 router.get("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {
@@ -25,7 +25,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-// 3. Crear nuevo libro -> URL: /api/libros
+// POST crear nuevo libro -> URL real: /api/libros
 router.post("/", async (req, res) => {
     try {
         const nextId = await getNextSequence("librosid"); 
@@ -37,7 +37,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-// 4. AÑADIR COMENTARIO -> URL: /api/libros/:id/comentario
+// POST añadir comentario -> URL real: /api/libros/:id/comentario
 router.post("/:id/comentario", async (req, res) => {
     const id = parseInt(req.params.id);
     const { usuario, texto, estrellas } = req.body;
@@ -57,17 +57,18 @@ router.post("/:id/comentario", async (req, res) => {
 
         // Recalcular promedios
         const totalEstrellas = libro.comentarios.reduce((acc, c) => acc + c.estrellas, 0);
-        libro.puntuacionMedia = (totalEstrellas / libro.comentarios.length).toFixed(1);
+        libro.puntuacionMedia = parseFloat((totalEstrellas / libro.comentarios.length).toFixed(1));
         libro.numeroCriticas = libro.comentarios.length;
 
         await libro.save();
         res.status(201).json(libro);
     } catch (err) {
+        console.error("Error en POST comentario:", err);
         res.status(500).json({ error: "Error al añadir el comentario" });
     }
 });
 
-// 5. Actualizar libro -> URL: /api/libros/:id
+// PUT actualizar -> URL real: /api/libros/:id
 router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {
@@ -79,7 +80,7 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-// 6. Eliminar libro -> URL: /api/libros/:id
+// DELETE eliminar -> URL real: /api/libros/:id
 router.delete("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     try {

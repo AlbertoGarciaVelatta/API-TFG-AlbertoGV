@@ -14,8 +14,8 @@ const novelasRouter = require("./routes/novelas");
 
 // 5. Middleware para analizar JSON
 app.use(express.json());  //Asume que esas rutas estarán disponibles bajo el prefijo /api.
-app.use("/api", librosRouter);
-app.use("/api", novelasRouter);
+app.use("/api/libros", librosRouter); 
+app.use("/api/novelas", novelasRouter);
 
 module.exports = app;  // 👈 Exportamos app para usarlo en index.js
 
