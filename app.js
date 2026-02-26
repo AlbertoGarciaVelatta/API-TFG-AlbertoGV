@@ -17,7 +17,7 @@ app.use(express.json());  //Asume que esas rutas estarán disponibles bajo el pr
 app.use("/api/libros", librosRouter); 
 app.use("/api/novelas", novelasRouter);
 
-module.exports = app;  // 👈 Exportamos app para usarlo en index.js
+module.exports = app;  //  Exportamos app para usarlo en index.js
 
 // Por ejemplo. En libros.js defines una ruta router.get("/libros")
 //              En el navegador o Android accedes a http://localhost:3000/api/libros
