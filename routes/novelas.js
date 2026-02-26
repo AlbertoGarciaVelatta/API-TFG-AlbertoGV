@@ -46,27 +46,33 @@ router.get('/novelas_publicas', async (req, res) => {
     }
 });
 
-// ARCHIVO: novelas.js
 router.delete('/novelas_usuarios', async (req, res) => {
-    // decodeURIComponent limpia cualquier símbolo extraño que venga de la URL
-    const titulo = decodeURIComponent(req.query.titulo).trim();
-    const autorId = req.query.autorId.trim();
-
     try {
+        // Express ya decodifica los parámetros, solo asegúrate de que existan y limpia espacios
+        const titulo = req.query.titulo ? req.query.titulo.trim() : null;
+        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
+
+        if (!titulo || !autorId) {
+            return res.status(400).json({ error: "Faltan parámetros: titulo y autorId son obligatorios" });
+        }
+
+        // Buscamos y borramos
         const resultado = await NovelaUsuario.findOneAndDelete({ 
             titulo: titulo, 
             autorId: autorId 
         });
 
         if (resultado) {
+            console.log(`✅ Eliminado: "${titulo}" del autor ${autorId}`);
             res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            // Este log te dirá exactamente qué intentó buscar el servidor
-            console.log(`No se encontró: "${titulo}" de "${autorId}"`);
-            res.status(404).json({ error: "No encontrado" });
+            // Este log es vital para que mires en Render por qué falló
+            console.log(`❌ No se halló para borrar: Título: [${titulo}] | ID: [${autorId}]`);
+            res.status(404).json({ error: "No se encontró el documento en la base de datos" });
         }
     } catch (err) {
-        res.status(500).json({ error: "Error interno" });
+        console.error("Error en el DELETE:", err);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 
