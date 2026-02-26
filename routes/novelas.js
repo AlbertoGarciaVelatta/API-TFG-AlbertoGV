@@ -46,4 +46,15 @@ router.get('/novelas_publicas', async (req, res) => {
     }
 });
 
+// Ruta para eliminar una novela cuando el usuario la pone privada
+router.delete('/novelas_usuarios', async (req, res) => {
+    const { titulo, autorId } = req.query;
+    try {
+        await NovelaUsuario.deleteOne({ titulo: titulo, autorId: autorId });
+        res.json({ message: "Eliminada con éxito" });
+    } catch (err) {
+        res.status(500).json({ error: "Error al eliminar" });
+    }
+});
+
 module.exports = router;
