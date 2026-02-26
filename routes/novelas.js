@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const NovelaUsuario = require('../models/novela'); // Asegúrate de que la ruta sea correcta
+const NovelaUsuario = require('../models/novela'); 
 
 // 1. OBTENER MIS NOVELAS (Privadas y Públicas del autor)
-// GET /api/novelas_usuarios?autorId=...
 router.get('/novelas_usuarios', async (req, res) => {
     const { autorId } = req.query;
     if (!autorId) return res.status(400).json({ error: "Falta autorId" });
@@ -17,15 +16,16 @@ router.get('/novelas_usuarios', async (req, res) => {
 });
 
 // 2. SINCRONIZAR (Guardar o Actualizar)
-// POST /api/novelas_usuarios
 router.post('/novelas_usuarios', async (req, res) => {
     const { titulo, autorId } = req.body;
-
     try {
-        // Buscamos por título y autor. Si existe, actualiza. Si no, crea (upsert).
+        // Limpiamos espacios para evitar errores de búsqueda futuros
+        const tituloLimpio = titulo ? titulo.trim() : "";
+        const autorIdLimpio = autorId ? autorId.trim() : "";
+
         const novelaSincronizada = await NovelaUsuario.findOneAndUpdate(
-            { titulo: titulo, autorId: autorId },
-            { ...req.body, ultimaActualizacion: Date.now() }, // Forzamos actualización de fecha
+            { titulo: tituloLimpio, autorId: autorIdLimpio },
+            { ...req.body, titulo: tituloLimpio, autorId: autorIdLimpio, ultimaActualizacion: Date.now() },
             { new: true, upsert: true }
         );
         res.json(novelaSincronizada);
@@ -34,11 +34,9 @@ router.post('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 3. OBTENER NOVELAS PÚBLICAS (Muro de la comunidad)
-// GET /api/novelas_publicas
+// 3. OBTENER NOVELAS PÚBLICAS
 router.get('/novelas_publicas', async (req, res) => {
     try {
-        // Buscamos todas las que tengan esPublica: true, sin importar el autor
         const publicas = await NovelaUsuario.find({ esPublica: true });
         res.json(publicas);
     } catch (err) {
@@ -46,17 +44,17 @@ router.get('/novelas_publicas', async (req, res) => {
     }
 });
 
+// 4. ELIMINAR NOVELA (Corregido para manejar títulos con espacios)
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
-        // Express ya decodifica los parámetros, solo asegúrate de que existan y limpia espacios
-        const titulo = req.query.titulo ? req.query.titulo.trim() : null;
+        // decodeURIComponent es vital si el título tiene espacios o tildes
+        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
         const autorId = req.query.autorId ? req.query.autorId.trim() : null;
 
         if (!titulo || !autorId) {
-            return res.status(400).json({ error: "Faltan parámetros: titulo y autorId son obligatorios" });
+            return res.status(400).json({ error: "Faltan parámetros: titulo y autorId" });
         }
 
-        // Buscamos y borramos
         const resultado = await NovelaUsuario.findOneAndDelete({ 
             titulo: titulo, 
             autorId: autorId 
@@ -66,12 +64,10 @@ router.delete('/novelas_usuarios', async (req, res) => {
             console.log(`✅ Eliminado: "${titulo}" del autor ${autorId}`);
             res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            // Este log es vital para que mires en Render por qué falló
-            console.log(`❌ No se halló para borrar: Título: [${titulo}] | ID: [${autorId}]`);
-            res.status(404).json({ error: "No se encontró el documento en la base de datos" });
+            console.log(`❌ No hallado: [${titulo}] - [${autorId}]`);
+            res.status(404).json({ error: "No encontrado en la base de datos" });
         }
     } catch (err) {
-        console.error("Error en el DELETE:", err);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
