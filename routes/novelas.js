@@ -46,9 +46,11 @@ router.get('/novelas_publicas', async (req, res) => {
     }
 });
 
-// Ruta para eliminar una novela cuando el usuario la pone privada
+// ARCHIVO: novelas.js
 router.delete('/novelas_usuarios', async (req, res) => {
-    const { titulo, autorId } = req.query; // <--- CAMBIO AQUÍ
+    // decodeURIComponent limpia cualquier símbolo extraño que venga de la URL
+    const titulo = decodeURIComponent(req.query.titulo).trim();
+    const autorId = req.query.autorId.trim();
 
     try {
         const resultado = await NovelaUsuario.findOneAndDelete({ 
@@ -57,12 +59,14 @@ router.delete('/novelas_usuarios', async (req, res) => {
         });
 
         if (resultado) {
-            res.json({ mensaje: "Novela eliminada de MongoDB" });
+            res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            res.status(404).json({ error: "No se encontró la novela para borrar" });
+            // Este log te dirá exactamente qué intentó buscar el servidor
+            console.log(`No se encontró: "${titulo}" de "${autorId}"`);
+            res.status(404).json({ error: "No encontrado" });
         }
     } catch (err) {
-        res.status(500).json({ error: "Error al eliminar" });
+        res.status(500).json({ error: "Error interno" });
     }
 });
 
