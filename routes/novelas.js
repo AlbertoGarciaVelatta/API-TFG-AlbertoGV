@@ -45,6 +45,7 @@ router.post('/novelas_usuarios', async (req, res) => {
 // novelas.js - RUTA DELETE CORREGIDA
 // novelas.js (Servidor)
 router.delete('/novelas_usuarios', async (req, res) => {
+    console.log("QUERY RECIBIDA:", req.query);
     try {
         // decodeURIComponent maneja espacios y tildes correctamente
         const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
