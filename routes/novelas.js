@@ -40,68 +40,35 @@ router.post('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 4. ELIMINAR (DELETE) - Con Logs para ver el error real
+
+
+// novelas.js - RUTA DELETE CORREGIDA
+// novelas.js (Servidor)
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
-        // Usamos decodeURIComponent y limpiamos espacios
+        // decodeURIComponent maneja espacios y tildes correctamente
         const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
         const autorId = req.query.autorId ? req.query.autorId.trim() : null;
 
-        console.log(`Intentando borrar: [${titulo}] de [${autorId}]`);
+        // LOG PARA DEBUG: Verás esto en la consola de Render
+        console.log(`Intentando borrar: [${titulo}] del autor [${autorId}]`);
 
-        // Buscamos ignorando mayúsculas para asegurar el match
+        // SOLUCIÓN AL 404: Usamos regex con opción 'i' (ignore case)
+        // Esto encuentra "Prueba" aunque mandes "prueba"
         const resultado = await NovelaUsuario.findOneAndDelete({ 
-            titulo: { $regex: `^${titulo}$`, $options: 'i' },
+            titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
             autorId: autorId 
         });
 
         if (resultado) {
-            console.log("✅ Borrado de MongoDB");
+            console.log("✅ Eliminado con éxito");
             res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            console.log("❌ No se encontró en MongoDB");
-            res.status(404).json({ error: "No existe" });
+            console.log("❌ No se encontró nada coincidente en Atlas");
+            res.status(404).json({ error: "No encontrado" });
         }
     } catch (err) {
         res.status(500).json({ error: "Error interno" });
-    }
-});
-
-// 3. OBTENER NOVELAS PÚBLICAS
-router.get('/novelas_publicas', async (req, res) => {
-    try {
-        const publicas = await NovelaUsuario.find({ esPublica: true });
-        res.json(publicas);
-    } catch (err) {
-        res.status(500).json({ error: "Error al obtener novelas públicas" });
-    }
-});
-
-// 4. ELIMINAR NOVELA (Corregido para manejar títulos con espacios)
-router.delete('/novelas_usuarios', async (req, res) => {
-    try {
-        // decodeURIComponent es vital si el título tiene espacios o tildes
-        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
-        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
-
-        if (!titulo || !autorId) {
-            return res.status(400).json({ error: "Faltan parámetros: titulo y autorId" });
-        }
-
-        const resultado = await NovelaUsuario.findOneAndDelete({ 
-            titulo: titulo, 
-            autorId: autorId 
-        });
-
-        if (resultado) {
-            console.log(`✅ Eliminado: "${titulo}" del autor ${autorId}`);
-            res.status(200).json({ mensaje: "Borrado OK" });
-        } else {
-            console.log(`❌ No hallado: [${titulo}] - [${autorId}]`);
-            res.status(404).json({ error: "No encontrado en la base de datos" });
-        }
-    } catch (err) {
-        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 
