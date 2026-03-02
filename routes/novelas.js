@@ -15,22 +15,55 @@ router.get('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 2. SINCRONIZAR (Guardar o Actualizar)
+// novelas.js
+
+// 2. SINCRONIZAR (POST) - Corregido para evitar duplicados si solo cambias el contenido
 router.post('/novelas_usuarios', async (req, res) => {
-    const { titulo, autorId } = req.body;
     try {
-        // Limpiamos espacios para evitar errores de búsqueda futuros
-        const tituloLimpio = titulo ? titulo.trim() : "";
-        const autorIdLimpio = autorId ? autorId.trim() : "";
+        // Limpiamos agresivamente
+        const titulo = req.body.titulo ? req.body.titulo.trim() : "";
+        const autorId = req.body.autorId ? req.body.autorId.trim() : "";
+
+        if (!titulo || !autorId) return res.status(400).send("Datos incompletos");
 
         const novelaSincronizada = await NovelaUsuario.findOneAndUpdate(
-            { titulo: tituloLimpio, autorId: autorIdLimpio },
-            { ...req.body, titulo: tituloLimpio, autorId: autorIdLimpio, ultimaActualizacion: Date.now() },
+            { 
+                titulo: { $regex: `^${titulo}$`, $options: 'i' }, // Búsqueda insensible a mayúsculas
+                autorId: autorId 
+            },
+            { ...req.body, titulo, autorId, ultimaActualizacion: Date.now() },
             { new: true, upsert: true }
         );
-        res.json(novelaSincronizada);
+        res.status(200).json(novelaSincronizada);
     } catch (err) {
-        res.status(500).json({ error: "Error en la sincronización" });
+        res.status(500).json({ error: "Error al sincronizar" });
+    }
+});
+
+// 4. ELIMINAR (DELETE) - Con Logs para ver el error real
+router.delete('/novelas_usuarios', async (req, res) => {
+    try {
+        // Usamos decodeURIComponent y limpiamos espacios
+        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
+        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
+
+        console.log(`Intentando borrar: [${titulo}] de [${autorId}]`);
+
+        // Buscamos ignorando mayúsculas para asegurar el match
+        const resultado = await NovelaUsuario.findOneAndDelete({ 
+            titulo: { $regex: `^${titulo}$`, $options: 'i' },
+            autorId: autorId 
+        });
+
+        if (resultado) {
+            console.log("✅ Borrado de MongoDB");
+            res.status(200).json({ mensaje: "Borrado OK" });
+        } else {
+            console.log("❌ No se encontró en MongoDB");
+            res.status(404).json({ error: "No existe" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: "Error interno" });
     }
 });
 
