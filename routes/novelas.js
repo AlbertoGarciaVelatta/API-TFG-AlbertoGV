@@ -2,13 +2,26 @@ const express = require('express');
 const router = express.Router();
 const NovelaUsuario = require('../models/novela'); 
 
-// 1. OBTENER MIS NOVELAS
+// 1. MURO DE LA COMUNIDAD (Obtener todas las novelas PÚBLICAS de todos los usuarios)
+router.get('/novelas_publicas', async (req, res) => {
+    try {
+        // Filtramos para que solo devuelva las que tienen esPublica: true
+        const novelas = await NovelaUsuario.find({ esPublica: true });
+        console.log(`Cargando muro: ${novelas.length} novelas públicas encontradas`);
+        res.json(novelas);
+    } catch (err) {
+        console.error("Error en muro comunidad:", err);
+        res.status(500).json({ error: "Error al obtener el muro de la comunidad" });
+    }
+});
+
+// 2. MIS NOVELAS (Obtener todas las novelas de un autor específico)
 router.get('/novelas_usuarios', async (req, res) => {
     const { autorId } = req.query;
     if (!autorId) return res.status(400).json({ error: "Falta autorId" });
 
     try {
-        // Usamos regex también aquí por si hay discrepancias de mayúsculas
+        // Buscamos por autorId ignorando mayúsculas/minúsculas para evitar fallos de Firebase
         const novelas = await NovelaUsuario.find({ 
             autorId: { $regex: `^${autorId.trim()}$`, $options: 'i' } 
         });
@@ -18,7 +31,7 @@ router.get('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 2. SINCRONIZAR (POST) - CORREGIDO
+// 3. SINCRONIZAR (POST) - Crea o actualiza una novela
 router.post('/novelas_usuarios', async (req, res) => {
     try {
         const titulo = req.body.titulo ? req.body.titulo.trim() : "";
@@ -29,24 +42,25 @@ router.post('/novelas_usuarios', async (req, res) => {
         const novelaSincronizada = await NovelaUsuario.findOneAndUpdate(
             { 
                 titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
-                autorId: { $regex: `^${autorId}$`, $options: 'i' } // Regex añadido para seguridad
+                autorId: { $regex: `^${autorId}$`, $options: 'i' } 
             },
             { 
                 ...req.body, 
                 titulo, 
                 autorId, 
-                ultimaActualizacion: Date.now() // CORREGIDO: 'v' minúscula para coincidir con Atlas
+                ultimaActualizacion: Date.now() // 'v' minúscula para coincidir con Atlas
             },
             { new: true, upsert: true }
         );
+        console.log(`Novela sincronizada: ${titulo}`);
         res.status(200).json(novelaSincronizada);
     } catch (err) {
-        console.error("Error en POST:", err);
+        console.error("Error en sincronización:", err);
         res.status(500).json({ error: "Error al sincronizar" });
     }
 });
 
-// 3. BORRAR (DELETE) - CORREGIDO
+// 4. BORRAR (DELETE) - Elimina novela de la nube
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
         const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
@@ -60,12 +74,14 @@ router.delete('/novelas_usuarios', async (req, res) => {
         });
 
         if (resultado) {
+            console.log(`Borrado exitoso: ${titulo}`);
             res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            res.status(404).json({ error: "No encontrado" });
+            res.status(404).json({ error: "No encontrado en Atlas" });
         }
     } catch (err) {
-        res.status(500).json({ error: "Error interno" });
+        console.error("Error en borrado:", err);
+        res.status(500).json({ error: "Error interno al borrar" });
     }
 });
 
