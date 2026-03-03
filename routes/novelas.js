@@ -45,30 +45,28 @@ router.post('/novelas_usuarios', async (req, res) => {
 // novelas.js - RUTA DELETE CORREGIDA
 // novelas.js (Servidor)
 router.delete('/novelas_usuarios', async (req, res) => {
-    console.log("QUERY RECIBIDA:", req.query);
+    const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
+    const autorId = req.query.autorId ? req.query.autorId.trim() : null;
+
+    console.log(`Buscando para borrar: Título='${titulo}', Autor='${autorId}'`);
+
     try {
-        // decodeURIComponent maneja espacios y tildes correctamente
-        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
-        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
-
-        // LOG PARA DEBUG: Verás esto en la consola de Render
-        console.log(`Intentando borrar: [${titulo}] del autor [${autorId}]`);
-
-        // SOLUCIÓN AL 404: Usamos regex con opción 'i' (ignore case)
-        // Esto encuentra "Prueba" aunque mandes "prueba"
+        // Ponemos el autorId también con regex insensible a mayúsculas por seguridad
         const resultado = await NovelaUsuario.findOneAndDelete({ 
             titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
-            autorId: autorId 
+            autorId: { $regex: `^${autorId}$`, $options: 'i' } 
         });
 
         if (resultado) {
-            console.log("✅ Eliminado con éxito");
+            console.log("✅ Documento encontrado y eliminado");
             res.status(200).json({ mensaje: "Borrado OK" });
         } else {
-            console.log("❌ No se encontró nada coincidente en Atlas");
+            // Esto es lo que te está pasando ahora
+            console.log("❌ No se encontró coincidencia exacta en Atlas");
             res.status(404).json({ error: "No encontrado" });
         }
     } catch (err) {
+        console.error("Error en DELETE:", err);
         res.status(500).json({ error: "Error interno" });
     }
 });
