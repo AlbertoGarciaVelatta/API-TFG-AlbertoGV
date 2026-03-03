@@ -45,29 +45,34 @@ router.post('/novelas_usuarios', async (req, res) => {
 // novelas.js - RUTA DELETE CORREGIDA
 // novelas.js (Servidor)
 router.delete('/novelas_usuarios', async (req, res) => {
-    const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
-    const autorId = req.query.autorId ? req.query.autorId.trim() : null;
-
-    console.log(`Buscando para borrar: Título='${titulo}', Autor='${autorId}'`);
-
     try {
-        // Ponemos el autorId también con regex insensible a mayúsculas por seguridad
+        // Extraemos y limpiamos los datos de la URL
+        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
+        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
+
+        console.log(`Petición de borrado recibida: Titulo[${titulo}] Autor[${autorId}]`);
+
+        if (!titulo || !autorId) {
+            return res.status(400).json({ error: "Faltan parámetros" });
+        }
+
+        // Buscamos ignorando mayúsculas/minúsculas en AMBOS campos
+        // Esto soluciona si 'Alfonso' != 'alfonso'
         const resultado = await NovelaUsuario.findOneAndDelete({ 
             titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
             autorId: { $regex: `^${autorId}$`, $options: 'i' } 
         });
 
         if (resultado) {
-            console.log("✅ Documento encontrado y eliminado");
-            res.status(200).json({ mensaje: "Borrado OK" });
+            console.log("✅ Éxito: Documento eliminado de la colección Novelas");
+            res.status(200).json({ mensaje: "Borrado correctamente" });
         } else {
-            // Esto es lo que te está pasando ahora
-            console.log("❌ No se encontró coincidencia exacta en Atlas");
+            console.log("❌ Fallo: No existe ningún documento con esos datos en Atlas");
             res.status(404).json({ error: "No encontrado" });
         }
     } catch (err) {
-        console.error("Error en DELETE:", err);
-        res.status(500).json({ error: "Error interno" });
+        console.error("❌ Error interno:", err);
+        res.status(500).json({ error: "Error en el servidor" });
     }
 });
 
