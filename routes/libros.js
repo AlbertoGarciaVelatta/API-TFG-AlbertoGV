@@ -11,17 +11,27 @@ router.get("/", async (req, res) => {
         const { titulo, autor, genero } = req.query;
         let filtro = {};
 
-        if (titulo && titulo.trim() !== "") filtro.titulo = { $regex: titulo, $options: 'i' };
-        if (autor && autor.trim() !== "") filtro.autor = { $regex: autor, $options: 'i' };
-        if (genero && genero !== "Todos" && genero.trim() !== "") filtro.genero = genero;
+        // Solo añadimos al filtro si el usuario ha escrito algo
+        if (titulo && titulo.trim() !== "") {
+            filtro.titulo = { $regex: titulo.trim(), $options: 'i' }; // 'i' es para ignorar mayúsculas
+        }
+        if (autor && autor.trim() !== "") {
+            filtro.autor = { $regex: autor.trim(), $options: 'i' };
+        }
+        if (genero && genero !== "Todos" && genero.trim() !== "") {
+            filtro.genero = genero;
+        }
 
+        console.log("Buscando con filtro:", filtro); // Esto aparecerá en los logs de Render
+        
+        // AHORA SÍ: Usamos el filtro en la consulta
         const libros = await Libro.find(filtro); 
         res.json(libros);
     } catch (err) {
-        res.status(500).json({ error: "Error al obtener libros" });
+        console.error("Error en búsqueda:", err);
+        res.status(500).json({ error: "Error al obtener los libros" });
     }
 });
-
 // GET un libro por ID
 router.get("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
