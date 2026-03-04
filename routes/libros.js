@@ -4,16 +4,19 @@ const Libro = require("../models/libro");
 const getNextSequence = require("../helpers/getNextSequence");
 
 // GET todos los libros
+// En tu servidor: routes/libros.js
+
 router.get("/", async (req, res) => {
     try {
-        const { titulo, autor, genero } = req.query;
+        const { titulo, autor, genero } = req.query; // 1. Recogemos los filtros
         let filtro = {};
 
-        if (titulo) filtro.titulo = { $regex: titulo, $options: 'i' };
-        if (autor) filtro.autor = { $regex: autor, $options: 'i' };
-        if (genero && genero !== "Todos") filtro.genero = genero;
+        // 2. Construimos el objeto de búsqueda para MongoDB
+        if (titulo) filtro.titulo = { $regex: titulo, $options: "i" };
+        if (autor) filtro.autor = { $regex: autor, $options: "i" };
+        if (genero) filtro.genero = genero;
 
-        const libros = await Libro.find(filtro); 
+        const libros = await Libro.find(filtro); // 3. Filtramos en la base de datos
         res.json(libros);
     } catch (err) {
         res.status(500).json({ error: "Error al obtener los libros" });
