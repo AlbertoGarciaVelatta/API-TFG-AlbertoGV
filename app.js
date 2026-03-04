@@ -5,6 +5,8 @@
 const express = require("express");
 //const mongoose = require("mongoose");
 
+const cors = require("cors");
+
 // 3. Crear instancia de Express
 const app = express();
 
@@ -12,6 +14,7 @@ const app = express();
 const librosRouter = require("./routes/libros"); // <-- aquí importas tus rutas
 const novelasRouter = require("./routes/novelas");
 
+app.use(cors());
 // 5. Middleware para analizar JSON
 app.use(express.json());  //Asume que esas rutas estarán disponibles bajo el prefijo /api.
 app.use("/api/libros", librosRouter); 

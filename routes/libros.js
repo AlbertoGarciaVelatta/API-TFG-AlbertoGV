@@ -6,7 +6,14 @@ const getNextSequence = require("../helpers/getNextSequence");
 // GET todos los libros
 router.get("/", async (req, res) => {
     try {
-        const libros = await Libro.find(); 
+        const { titulo, autor, genero } = req.query;
+        let filtro = {};
+
+        if (titulo) filtro.titulo = { $regex: titulo, $options: 'i' };
+        if (autor) filtro.autor = { $regex: autor, $options: 'i' };
+        if (genero && genero !== "Todos") filtro.genero = genero;
+
+        const libros = await Libro.find(filtro); 
         res.json(libros);
     } catch (err) {
         res.status(500).json({ error: "Error al obtener los libros" });

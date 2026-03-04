@@ -1,27 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const NovelaUsuario = require('../models/novela'); 
+const NovelaUsuario = require('../models/novela');
+const mongoose = require('mongoose'); // Necesario para validar IDs
 
-// 1. MURO DE LA COMUNIDAD (Obtener todas las novelas PÚBLICAS de todos los usuarios)
+// 1. MURO DE LA COMUNIDAD (Sin cambios, sigue buscando todas las públicas)
 router.get('/novelas_publicas', async (req, res) => {
     try {
-        // Filtramos para que solo devuelva las que tienen esPublica: true
         const novelas = await NovelaUsuario.find({ esPublica: true });
-        console.log(`Cargando muro: ${novelas.length} novelas públicas encontradas`);
         res.json(novelas);
     } catch (err) {
-        console.error("Error en muro comunidad:", err);
-        res.status(500).json({ error: "Error al obtener el muro de la comunidad" });
+        res.status(500).json({ error: "Error al obtener el muro" });
     }
 });
 
-// 2. MIS NOVELAS (Obtener todas las novelas de un autor específico)
+// 2. MIS NOVELAS (Sin cambios, busca por autorId)
 router.get('/novelas_usuarios', async (req, res) => {
     const { autorId } = req.query;
     if (!autorId) return res.status(400).json({ error: "Falta autorId" });
-
     try {
-        // Buscamos por autorId ignorando mayúsculas/minúsculas para evitar fallos de Firebase
         const novelas = await NovelaUsuario.find({ 
             autorId: { $regex: `^${autorId.trim()}$`, $options: 'i' } 
         });
@@ -31,56 +27,71 @@ router.get('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 3. SINCRONIZAR (POST) - Crea o actualiza una novela
+// 3. SINCRONIZAR (POST) - Versión Mejorada y Segura
 router.post('/novelas_usuarios', async (req, res) => {
     try {
-        const titulo = req.body.titulo ? req.body.titulo.trim() : "";
-        const autorId = req.body.autorId ? req.body.autorId.trim() : "";
+        const { _id, titulo, autorId } = req.body;
+        
+        let criterioBusqueda = {};
 
-        if (!titulo || !autorId) return res.status(400).send("Datos incompletos");
+        // PRIORIDAD 1: Si tenemos un ID real de Mongo, buscamos por ese ID
+        if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+            criterioBusqueda = { _id: _id };
+        } 
+        // PRIORIDAD 2: Si no hay ID, buscamos por Título y Autor (para evitar duplicar)
+        else {
+            criterioBusqueda = { 
+                titulo: { $regex: `^${titulo.trim()}$`, $options: 'i' }, 
+                autorId: { $regex: `^${autorId.trim()}$`, $options: 'i' } 
+            };
+        }
 
+        // Ejecutamos la operación: 
+        // - Si lo encuentra: lo actualiza.
+        // - Si NO lo encuentra: lo crea (upsert: true).
         const novelaSincronizada = await NovelaUsuario.findOneAndUpdate(
-            { 
-                titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
-                autorId: { $regex: `^${autorId}$`, $options: 'i' } 
-            },
+            criterioBusqueda,
             { 
                 ...req.body, 
-                titulo, 
-                autorId, 
-                ultimaActualizacion: Date.now() // 'v' minúscula para coincidir con Atlas
+                ultimaActualizacion: Date.now() 
             },
-            { new: true, upsert: true }
+            { 
+                new: true,    // Devuelve el documento ya actualizado/creado
+                upsert: true, // Si no existe, lo crea
+                setDefaultsOnInsert: true // Aplica valores por defecto del modelo
+            }
         );
-        console.log(`Novela sincronizada: ${titulo}`);
+
+        console.log("Sincronización exitosa:", novelaSincronizada.titulo);
         res.status(200).json(novelaSincronizada);
+
     } catch (err) {
-        console.error("Error en sincronización:", err);
-        res.status(500).json({ error: "Error al sincronizar" });
+        console.error("Error sincronizando:", err);
+        res.status(500).json({ error: "Error al sincronizar novela" });
     }
 });
 
-// 4. BORRAR (DELETE) - Elimina novela de la nube
+// 4. BORRAR (DELETE) - AHORA BORRA POR ID
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
-        const titulo = req.query.titulo ? decodeURIComponent(req.query.titulo).trim() : null;
-        const autorId = req.query.autorId ? req.query.autorId.trim() : null;
+        const { id } = req.query; // Recibimos el id por parámetro
 
-        if (!titulo || !autorId) return res.status(400).json({ error: "Faltan parámetros" });
+        if (id && mongoose.Types.ObjectId.isValid(id)) {
+            const resultado = await NovelaUsuario.findByIdAndDelete(id);
+            if (resultado) return res.status(200).json({ mensaje: "Borrado por ID con éxito" });
+        }
 
-        const resultado = await NovelaUsuario.findOneAndDelete({ 
+        // Si falla por ID, mantenemos el borrado por título como respaldo (opcional)
+        const { titulo, autorId } = req.query;
+        const borradoLegacy = await NovelaUsuario.findOneAndDelete({ 
             titulo: { $regex: `^${titulo}$`, $options: 'i' }, 
             autorId: { $regex: `^${autorId}$`, $options: 'i' } 
         });
 
-        if (resultado) {
-            console.log(`Borrado exitoso: ${titulo}`);
-            res.status(200).json({ mensaje: "Borrado OK" });
-        } else {
-            res.status(404).json({ error: "No encontrado en Atlas" });
-        }
+        if (borradoLegacy) res.status(200).json({ mensaje: "Borrado por título con éxito" });
+        else res.status(404).json({ error: "No se encontró la novela" });
+
     } catch (err) {
-        console.error("Error en borrado:", err);
         res.status(500).json({ error: "Error interno al borrar" });
     }
 });
