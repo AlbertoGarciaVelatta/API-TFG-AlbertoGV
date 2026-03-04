@@ -57,7 +57,7 @@ router.post("/", async (req, res) => {
 });
 
 // POST añadir comentario (CON VALIDACIÓN DE USUARIO)
-router.post("/:id/comentario", async (req, res) => {
+router.post("/:id/comentarios", async (req, res) => {
     const id = parseInt(req.params.id);
     const { usuario, texto, estrellas } = req.body;
 
