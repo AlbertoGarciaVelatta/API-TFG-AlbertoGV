@@ -8,18 +8,17 @@ const getNextSequence = require("../helpers/getNextSequence");
 
 router.get("/", async (req, res) => {
     try {
-        const { titulo, autor, genero } = req.query; // 1. Recogemos los filtros
+        const { titulo, autor, genero } = req.query;
         let filtro = {};
 
-        // 2. Construimos el objeto de búsqueda para MongoDB
-        if (titulo) filtro.titulo = { $regex: titulo, $options: "i" };
-        if (autor) filtro.autor = { $regex: autor, $options: "i" };
-        if (genero) filtro.genero = genero;
+        if (titulo && titulo.trim() !== "") filtro.titulo = { $regex: titulo, $options: 'i' };
+        if (autor && autor.trim() !== "") filtro.autor = { $regex: autor, $options: 'i' };
+        if (genero && genero !== "Todos" && genero.trim() !== "") filtro.genero = genero;
 
-        const libros = await Libro.find(filtro); // 3. Filtramos en la base de datos
+        const libros = await Libro.find(filtro); 
         res.json(libros);
     } catch (err) {
-        res.status(500).json({ error: "Error al obtener los libros" });
+        res.status(500).json({ error: "Error al obtener libros" });
     }
 });
 
