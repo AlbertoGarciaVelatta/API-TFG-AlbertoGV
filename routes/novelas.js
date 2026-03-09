@@ -3,7 +3,7 @@ const router = express.Router();
 const NovelaUsuario = require('../models/novela'); // Importación correcta
 const mongoose = require('mongoose');
 
-// 1. MURO DE LA COMUNIDAD - Soporta búsqueda por título, autor y género
+// MURO DE LA COMUNIDAD - Soporta búsqueda por título, autor y género
 router.get("/novelas_publicas", async (req, res) => {
     try {
         const { titulo, autor, genero } = req.query;
@@ -28,7 +28,7 @@ router.get("/novelas_publicas", async (req, res) => {
     }
 });
 
-// 2. MIS NOVELAS - Obtiene las novelas privadas y públicas de un autor específico
+// MIS NOVELAS - Obtiene las novelas privadas y públicas de un autor específico
 router.get('/novelas_usuarios', async (req, res) => {
     const { autorId } = req.query;
     if (!autorId) return res.status(400).json({ error: "Falta autorId" });
@@ -42,7 +42,7 @@ router.get('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 3. SINCRONIZAR (POST) - Crea o actualiza una novela sin duplicarla
+// SINCRONIZAR (POST) - Crea o actualiza una novela sin duplicarla
 router.post('/novelas_usuarios', async (req, res) => {
     try {
         const { _id, titulo, autorId } = req.body;
@@ -81,18 +81,18 @@ router.post('/novelas_usuarios', async (req, res) => {
     }
 });
 
-// 4. BORRAR (DELETE) - Borrado seguro por ID o Título
+// En novelas.js
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
         const { id, titulo, autorId } = req.query;
         
-        // 1. Intento por ID (Lo que envía Android LibroApiService)
+        // VALIDACIÓN: Solo intentamos borrar por ID si es un ObjectId válido de 24 caracteres
         if (id && mongoose.Types.ObjectId.isValid(id)) {
             const resultado = await NovelaUsuario.findByIdAndDelete(id);
             if (resultado) return res.status(200).json({ mensaje: "Borrado por ID con éxito" });
         }
 
-        // 2. Plan B: Por Título y Autor
+        // PLAN B: Si el ID no era válido o no se encontró, usamos Título y Autor
         if (titulo && autorId) {
             const borradoLegacy = await NovelaUsuario.findOneAndDelete({ 
                 titulo: { $regex: `^${titulo.trim()}$`, $options: 'i' }, 
@@ -103,8 +103,7 @@ router.delete('/novelas_usuarios', async (req, res) => {
 
         res.status(404).json({ error: "No se encontró la novela para borrar" });
     } catch (err) {
-        console.error("Error en DELETE:", err);
-        res.status(500).json({ error: "Error interno al borrar" });
+        res.status(500).json({ error: "Error interno" });
     }
 });
 
