@@ -12,9 +12,10 @@ router.get("/novelas_publicas", async (req, res) => {
         if (titulo && titulo.trim() !== "") {
             filtro.titulo = { $regex: titulo.trim(), $options: 'i' };
         }
-        if (autor && autor.trim() !== "") {
-            filtro.autor = { $regex: autor.trim(), $options: 'i' };
-        }
+
+    if (autor && autor.trim() !== "") {
+    filtro.autorId = { $regex: autor.trim(), $options: 'i' };
+}
         if (genero && genero !== "Todos" && genero.trim() !== "") {
             filtro.genero = genero;
         }
