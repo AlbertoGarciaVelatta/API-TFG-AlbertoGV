@@ -2,10 +2,11 @@ const mongoose = require("mongoose");
 
 // 1. Definimos la estructura del comentario
 const ComentarioSchema = new mongoose.Schema({
-  usuario: String,
-  texto: String,
-  estrellas: { type: Number, min: 1, max: 5 },
-  fecha: { type: Date, default: Date.now }
+    id: { type: String }, // El UUID que enviamos desde Kotlin
+    usuario: { type: String, required: true },
+    texto: { type: String },
+    fecha: { type: String },
+    estrellas: { type: Number, min: 1, max: 5 }
 });
 
 // 2. Definimos el esquema del Libro
@@ -25,7 +26,6 @@ const LibroSchema = new mongoose.Schema({
   puntuacionMedia: { type: Number, default: 0 },
   numeroCriticas: { type: Number, default: 0 },
   
-  // Aquí es donde "embebes" los comentarios como un array
   comentarios: [ComentarioSchema] 
 });
 

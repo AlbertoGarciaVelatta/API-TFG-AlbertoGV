@@ -82,6 +82,49 @@ router.post('/novelas_usuarios', async (req, res) => {
     }
 });
 
+router.post("/:id/comentarios", async (req, res) => {
+    const id = req.params.id; // El _id de Mongo de la novela
+    
+    try {
+        // 1. Validar que el ID sea correcto
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "ID de novela no válido" });
+        }
+
+        // 2. Buscar la novela en la base de datos
+        const novela = await NovelaUsuario.findById(id);
+        if (!novela) {
+            return res.status(404).json({ error: "Novela no encontrada" });
+        }
+
+        // 3. Extraer los datos del comentario que envía la App de Android
+        const { usuario, texto, estrellas } = req.body;
+
+        if (!usuario || !estrellas) {
+            return res.status(400).json({ error: "El usuario y las estrellas son obligatorios" });
+        }
+
+        // 4. Crear el objeto del nuevo comentario
+        const nuevoComentario = {
+            usuario: usuario,
+            texto: texto || "", // Si no escriben texto, se guarda vacío
+            estrellas: estrellas,
+            fecha: new Date()
+        };
+
+        // 5. Añadirlo al array de la novela y guardar
+        novela.comentarios.push(nuevoComentario);
+        await novela.save();
+
+        // Devolvemos la novela actualizada a la App
+        res.status(201).json(novela);
+        
+    } catch (err) {
+        console.error("Error al añadir comentario a la novela:", err);
+        res.status(500).json({ error: "Error al añadir el comentario" });
+    }
+});
+
 // En novelas.js
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
