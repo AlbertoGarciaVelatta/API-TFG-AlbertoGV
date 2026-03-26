@@ -91,6 +91,18 @@ router.post("/:id/comentarios", async (req, res) => {
     }
 });
 
+// GET Recomendaciones (Top 5 mejor valorados)
+router.get("/recomendaciones", async (req, res) => {
+    try {
+        const recomendadas = await Libro.find()
+            .sort({ puntuacionMedia: -1 }) // -1 significa de mayor a menor
+            .limit(5); // Solo los 5 mejores
+        res.json(recomendadas);
+    } catch (err) {
+        res.status(500).json({ error: "Error al obtener recomendaciones" });
+    }
+});
+
 // PUT actualizar libro
 router.put("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
