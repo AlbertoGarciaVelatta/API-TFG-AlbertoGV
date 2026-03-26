@@ -43,6 +43,19 @@ router.get('/novelas_usuarios', async (req, res) => {
     }
 });
 
+// GET Recomendaciones (Top 5 mejor valoradas)
+router.get("/recomendaciones", async (req, res) => {
+    try {
+        // Buscamos novelas públicas, ordenadas por puntuaciónMedia de mayor a menor (-1)
+        const recomendadas = await NovelaUsuario.find({ esPublica: true })
+            .sort({ puntuacionMedia: -1 })
+            .limit(5);
+        res.json(recomendadas);
+    } catch (err) {
+        res.status(500).json({ error: "Error al obtener recomendaciones" });
+    }
+});
+
 // SINCRONIZAR (POST) - Crea o actualiza una novela sin duplicarla
 router.post('/novelas_usuarios', async (req, res) => {
     try {
