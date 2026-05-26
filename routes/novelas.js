@@ -13,14 +13,14 @@ router.get("/novelas_publicas", async (req, res) => {
             filtro.titulo = { $regex: titulo.trim(), $options: 'i' };
         }
 
-    if (autor && autor.trim() !== "") {
-    filtro.autorId = { $regex: autor.trim(), $options: 'i' };
-}
+        if (autor && autor.trim() !== "") {
+            filtro.autorId = { $regex: autor.trim(), $options: 'i' };
+        }
+        
         if (genero && genero !== "Todos" && genero.trim() !== "") {
             filtro.genero = genero;
         }
 
-        // Corregido: Usamos NovelaUsuario que es el nombre del modelo importado
         const novelas = await NovelaUsuario.find(filtro); 
         res.json(novelas);
     } catch (err) {

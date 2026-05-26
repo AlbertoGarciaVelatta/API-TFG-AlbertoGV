@@ -8,16 +8,26 @@ const ComentarioSchema = new mongoose.Schema({
   fecha: { type: Date, default: Date.now }
 });
 
+// --- NUEVO: Esquema para los Capítulos ---
+const CapituloSchema = new mongoose.Schema({
+    idLocal: { type: String }, // Un ID generado por el móvil para poder editarlo/borrarlo fácilmente
+    numero: { type: Number, required: true },
+    titulo: { type: String, default: "Sin título" },
+    contenido: { type: String, required: true },
+    fechaCreacion: { type: Date, default: Date.now }
+});
+
 const novelaSchema = new mongoose.Schema({
     titulo: { type: String, required: true, trim: true },
     sinopsis: { type: String, default: "" },
     genero: { type: String, default: "Otros" },
-    contenido: { type: String, required: true },
     autorId: { type: String, required: true, index: true },
     esPublica: { type: Boolean, default: false },
     ultimaActualizacion: { type: Number, default: Date.now },
     
-    // --- NUEVO: Array de comentarios para las novelas ---
+    // Array de Capítulos
+    capitulos: [CapituloSchema],
+    
     comentarios: [ComentarioSchema] 
 }, {
     toJSON: { virtuals: true },

@@ -8,12 +8,13 @@ const getNextSequence = require("../helpers/getNextSequence");
 
 router.get("/", async (req, res) => {
     try {
-        const { titulo, autor, genero } = req.query;
+        // 1. Extraemos los filtros Y los nuevos parámetros de página
+        const { titulo, autor, genero, page = 1, limit = 10 } = req.query;
         let filtro = {};
 
-        // Solo añadimos al filtro si el usuario ha escrito algo
+    
         if (titulo && titulo.trim() !== "") {
-            filtro.titulo = { $regex: titulo.trim(), $options: 'i' }; // 'i' es para ignorar mayúsculas
+            filtro.titulo = { $regex: titulo.trim(), $options: 'i' };
         }
         if (autor && autor.trim() !== "") {
             filtro.autor = { $regex: autor.trim(), $options: 'i' };
@@ -22,16 +23,25 @@ router.get("/", async (req, res) => {
             filtro.genero = genero;
         }
 
-        console.log("Buscando con filtro:", filtro); // Esto aparecerá en los logs de Render
-        
-        // AHORA SÍ: Usamos el filtro en la consulta
-        const libros = await Libro.find(filtro); 
+        console.log("Buscando con filtro:", filtro); // Conservamos tu log
+
+        // 2. LÓGICA DE PAGINACIÓN:
+        const limiteEntero = parseInt(limit);
+        const saltar = (parseInt(page) - 1) * limiteEntero;
+
+        // Ejecutamos la búsqueda con .skip() y .limit()
+        const libros = await Libro.find(filtro)
+            .skip(saltar)
+            .limit(limiteEntero);
+            
         res.json(libros);
     } catch (err) {
         console.error("Error en búsqueda:", err);
         res.status(500).json({ error: "Error al obtener los libros" });
     }
 });
+
+
 // GET un libro por ID
 router.get("/:id", async (req, res) => {
     const id = parseInt(req.params.id);
