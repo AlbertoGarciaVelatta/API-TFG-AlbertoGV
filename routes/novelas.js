@@ -1,13 +1,13 @@
 const express = require('express');
-const router = express.Router();
-const NovelaUsuario = require('../models/novela'); // Importación correcta
+const router = report = express.Router();
+const NovelaUsuario = require('../models/novela'); 
 const mongoose = require('mongoose');
 
 // MURO DE LA COMUNIDAD - Soporta búsqueda por título, autor y género
 router.get("/novelas_publicas", async (req, res) => {
     try {
         const { titulo, autor, genero } = req.query;
-        let filtro = { esPublica: true }; // Solo novelas marcadas como públicas
+        let filtro = { esPublica: true }; 
 
         if (titulo && titulo.trim() !== "") {
             filtro.titulo = { $regex: titulo.trim(), $options: 'i' };
@@ -46,7 +46,6 @@ router.get('/novelas_usuarios', async (req, res) => {
 // GET Recomendaciones (Top 5 mejor valoradas)
 router.get("/recomendaciones", async (req, res) => {
     try {
-        // Buscamos novelas públicas, ordenadas por puntuaciónMedia de mayor a menor (-1)
         const recomendadas = await NovelaUsuario.find({ esPublica: true })
             .sort({ puntuacionMedia: -1 })
             .limit(5);
@@ -56,7 +55,7 @@ router.get("/recomendaciones", async (req, res) => {
     }
 });
 
-// SINCRONIZAR (POST) - Crea o actualiza una novela sin duplicarla
+// SINCRONIZAR (POST) - Guarda la novela completa con sus capítulos
 router.post('/novelas_usuarios', async (req, res) => {
     try {
         const { _id, titulo, autorId } = req.body;
@@ -64,11 +63,9 @@ router.post('/novelas_usuarios', async (req, res) => {
 
         let criterioBusqueda = {};
 
-        // Si Android envía un _id de Mongo válido, buscamos por ID
         if (_id && mongoose.Types.ObjectId.isValid(_id)) {
             criterioBusqueda = { _id: _id };
         } else {
-            // Si es nueva o no tenemos el ID, buscamos por combinación título/autor
             criterioBusqueda = { 
                 titulo: { $regex: `^${titulo.trim()}$`, $options: 'i' }, 
                 autorId: { $regex: `^${autorId.trim()}$`, $options: 'i' } 
@@ -82,8 +79,8 @@ router.post('/novelas_usuarios', async (req, res) => {
                 ultimaActualizacion: Date.now() 
             },
             { 
-                new: true,   // Devuelve el objeto ya actualizado
-                upsert: true, // Si no existe, lo crea
+                new: true,   
+                upsert: true, 
                 setDefaultsOnInsert: true 
             }
         );
@@ -95,61 +92,70 @@ router.post('/novelas_usuarios', async (req, res) => {
     }
 });
 
+// ENVIAR COMENTARIO (CORREGIDO CON PLAN B Y CALCULO MEDIA)
 router.post("/:id/comentarios", async (req, res) => {
-    const id = req.params.id; // El _id de Mongo de la novela
-    
+    const id = req.params.id; 
+    const { usuario, texto, estrellas, titulo, autorId } = req.body;
+
     try {
-        // 1. Validar que el ID sea correcto
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "ID de novela no válido" });
-        }
-
-        // 2. Buscar la novela en la base de datos
-        const novela = await NovelaUsuario.findById(id);
-        if (!novela) {
-            return res.status(404).json({ error: "Novela no encontrada" });
-        }
-
-        // 3. Extraer los datos del comentario que envía la App de Android
-        const { usuario, texto, estrellas } = req.body;
-
         if (!usuario || !estrellas) {
             return res.status(400).json({ error: "El usuario y las estrellas son obligatorios" });
         }
 
-        // 4. Crear el objeto del nuevo comentario
+        let novela = null;
+
+        // Intentar buscar primero por ID de Mongoose
+        if (id && mongoose.Types.ObjectId.isValid(id)) {
+            novela = await NovelaUsuario.findById(id);
+        }
+
+        // PLAN B: Si el ID no es válido o no se encuentra (caso de sincronizaciones pendientes en Android),
+        // buscamos por la combinación de Título y Autor provistos en el body.
+        if (!novela && titulo && autorId) {
+            novela = await NovelaUsuario.findOne({
+                titulo: { $regex: `^${titulo.trim()}$`, $options: 'i' },
+                autorId: { $regex: `^${autorId.trim()}$`, $options: 'i' }
+            });
+        }
+
+        if (!novela) {
+            return res.status(404).json({ error: "No se encontró la novela por ID ni por Título/Autor" });
+        }
+
+        // Crear el objeto del nuevo comentario
         const nuevoComentario = {
             usuario: usuario,
-            texto: texto || "", // Si no escriben texto, se guarda vacío
-            estrellas: estrellas,
+            texto: texto || "", 
+            estrellas: Number(estrellas),
             fecha: new Date()
         };
 
-        // 5. Añadirlo al array de la novela y guardar
+        // Añadir el comentario al array
         novela.comentarios.push(nuevoComentario);
-        await novela.save();
 
-        // Devolvemos la novela actualizada a la App
+        // RECALCULO DE LA NOTA MEDIA GLOBAL
+        const sumaEstrellas = novela.comentarios.reduce((sum, item) => sum + item.estrellas, 0);
+        novela.puntuacionMedia = sumaEstrellas / novela.comentarios.length;
+
+        await novela.save();
         res.status(201).json(novela);
         
     } catch (err) {
-        console.error("Error al añadir comentario a la novela:", err);
-        res.status(500).json({ error: "Error al añadir el comentario" });
+        console.error("Error al añadir comentario:", err);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 
-// En novelas.js
+// BORRAR NOVELA
 router.delete('/novelas_usuarios', async (req, res) => {
     try {
         const { id, titulo, autorId } = req.query;
         
-        // VALIDACIÓN: Solo intentamos borrar por ID si es un ObjectId válido de 24 caracteres
         if (id && mongoose.Types.ObjectId.isValid(id)) {
             const resultado = await NovelaUsuario.findByIdAndDelete(id);
             if (resultado) return res.status(200).json({ mensaje: "Borrado por ID con éxito" });
         }
 
-        // PLAN B: Si el ID no era válido o no se encontró, usamos Título y Autor
         if (titulo && autorId) {
             const borradoLegacy = await NovelaUsuario.findOneAndDelete({ 
                 titulo: { $regex: `^${titulo.trim()}$`, $options: 'i' }, 

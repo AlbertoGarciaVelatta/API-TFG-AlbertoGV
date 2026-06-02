@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// 1. Definimos la estructura del comentario (igual que en libro)
+// 1. Definimos la estructura del comentario
 const ComentarioSchema = new mongoose.Schema({
   usuario: String,
   texto: String,
@@ -8,9 +8,9 @@ const ComentarioSchema = new mongoose.Schema({
   fecha: { type: Date, default: Date.now }
 });
 
-// --- NUEVO: Esquema para los Capítulos ---
+// --- Esquema para los Capítulos ---
 const CapituloSchema = new mongoose.Schema({
-    idLocal: { type: String }, // Un ID generado por el móvil para poder editarlo/borrarlo fácilmente
+    idLocal: { type: String }, 
     numero: { type: Number, required: true },
     titulo: { type: String, default: "Sin título" },
     contenido: { type: String, required: true },
@@ -24,6 +24,9 @@ const novelaSchema = new mongoose.Schema({
     autorId: { type: String, required: true, index: true },
     esPublica: { type: Boolean, default: false },
     ultimaActualizacion: { type: Number, default: Date.now },
+    
+    // CORRECCIÓN: Agregamos la propiedad para que guarde y ordene las notas medias
+    puntuacionMedia: { type: Number, default: 0 }, 
     
     // Array de Capítulos
     capitulos: [CapituloSchema],
