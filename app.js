@@ -1,26 +1,31 @@
-// 1. Cargar variables de entorno (.env)
-//require("dotenv").config();  // importa las rutas definidas en routes/animales.js.
+const express = require('express');
+const cors    = require('cors');
+const app     = express();
 
-// 2. Importar dependencias
-const express = require("express");
-//const mongoose = require("mongoose");
+// ── Firebase Admin SDK ───────────────────────────────────────
+// Inicialización única — debe ir ANTES de cargar las rutas.
+// serviceAccountKey.json se descarga desde Firebase Console →
+// Configuración del proyecto → Cuentas de servicio.
+// ⚠️  Nunca subas este archivo a un repositorio público.
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json');
 
-const cors = require("cors");
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+}
 
-// 3. Crear instancia de Express
-const app = express();
-
-// 4. Importar las rutas
-const librosRouter = require("./routes/libros"); // <-- aquí importas tus rutas
-const novelasRouter = require("./routes/novelas");
+// ── Rutas ────────────────────────────────────────────────────
+const librosRouter  = require('./routes/libros');
+const novelasRouter = require('./routes/novelas');
+const adminRouter   = require('./routes/admin');
 
 app.use(cors());
-// 5. Middleware para analizar JSON
-app.use(express.json());  //Asume que esas rutas estarán disponibles bajo el prefijo /api.
-app.use("/api/libros", librosRouter); 
-app.use("/api/novelas", novelasRouter);
+app.use(express.json());
 
-module.exports = app;  //  Exportamos app para usarlo en index.js
+app.use('/api/libros',  librosRouter);
+app.use('/api/novelas', novelasRouter);
+app.use('/api/admin',   adminRouter);   // ← nuevo
 
-// Por ejemplo. En libros.js defines una ruta router.get("/libros")
-//              En el navegador o Android accedes a http://localhost:3000/api/libros
+module.exports = app;
