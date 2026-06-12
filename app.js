@@ -6,30 +6,26 @@ const app     = express();
 let adminInitializado = false;
 
 try {
-    const firebaseAdmin = require('firebase-admin');
+    const { initializeApp, getApps, cert } = require('firebase-admin/app');
 
-    if (!firebaseAdmin.apps || firebaseAdmin.apps.length === 0) {
-        let credential;
+    if (getApps().length === 0) {
+        let serviceAccount;
 
         if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-            // PRODUCCIÓN: credenciales en variable de entorno de Render
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-            credential = firebaseAdmin.credential.cert(serviceAccount);
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
             console.log('✅ Firebase Admin: usando variable de entorno');
         } else {
-            // DESARROLLO LOCAL: archivo serviceAccountKey.json
-            const serviceAccount = require('./serviceAccountKey.json');
-            credential = firebaseAdmin.credential.cert(serviceAccount);
-            console.log('✅ Firebase Admin: usando serviceAccountKey.json local');
+            serviceAccount = require('./serviceAccountKey.json');
+            console.log('✅ Firebase Admin: usando archivo local');
         }
 
-        firebaseAdmin.initializeApp({ credential });
+        initializeApp({ credential: cert(serviceAccount) });
     }
 
     adminInitializado = true;
+    console.log('✅ Firebase Admin inicializado correctamente');
 } catch (err) {
-    console.error('⚠️  Firebase Admin no disponible:', err.message);
-    console.error('   Las rutas /api/admin no funcionarán hasta configurarlo.');
+    console.error('❌ Firebase Admin error:', err.message);
 }
 
 // ── Rutas ────────────────────────────────────────────────────
@@ -42,18 +38,13 @@ app.use(express.json());
 app.use('/api/libros',  librosRouter);
 app.use('/api/novelas', novelasRouter);
 
-// Solo montamos las rutas de admin si Firebase está disponible
 if (adminInitializado) {
     const adminRouter = require('./routes/admin');
     app.use('/api/admin', adminRouter);
     console.log('✅ Rutas /api/admin activas');
 } else {
-    // Devolvemos un error claro en lugar de "Cannot GET"
     app.use('/api/admin', (req, res) => {
-        res.status(503).json({
-            error: 'Firebase Admin SDK no configurado en el servidor.',
-            solucion: 'Añade la variable de entorno FIREBASE_SERVICE_ACCOUNT en Render.'
-        });
+        res.status(503).json({ error: 'Firebase Admin SDK no configurado.' });
     });
 }
 

@@ -1,29 +1,11 @@
 const express = require('express');
 const router  = express.Router();
-const admin   = require('firebase-admin');
+const { getAuth } = require('firebase-admin/auth');
 
-// ─────────────────────────────────────────────────────────────
-// REQUISITO: Firebase Admin SDK inicializado en app.js
-//
-// En app.js añade esto UNA VEZ antes de las rutas:
-//
-//   const admin = require('firebase-admin');
-//   const serviceAccount = require('./serviceAccountKey.json');
-//   admin.initializeApp({
-//     credential: admin.credential.cert(serviceAccount)
-//   });
-//
-// El archivo serviceAccountKey.json se descarga desde:
-// Firebase Console → Configuración del proyecto
-//   → Cuentas de servicio → Generar nueva clave privada
-//
-// ⚠️  Añade serviceAccountKey.json a .gitignore — nunca lo subas
-// ─────────────────────────────────────────────────────────────
-
-// ── GET /api/admin/usuarios — lista todos los usuarios ───────
+// ── GET /api/admin/usuarios ──────────────────────────────────
 router.get('/usuarios', async (req, res) => {
     try {
-        const resultado = await admin.auth().listUsers(1000);
+        const resultado = await getAuth().listUsers(1000);
         const usuarios  = resultado.users.map(u => ({
             uid:   u.uid,
             email: u.email || '',
@@ -36,10 +18,10 @@ router.get('/usuarios', async (req, res) => {
     }
 });
 
-// ── DELETE /api/admin/usuarios/:uid — eliminar usuario ───────
+// ── DELETE /api/admin/usuarios/:uid ─────────────────────────
 router.delete('/usuarios/:uid', async (req, res) => {
     try {
-        await admin.auth().deleteUser(req.params.uid);
+        await getAuth().deleteUser(req.params.uid);
         res.json({ mensaje: 'Usuario eliminado correctamente' });
     } catch (err) {
         console.error('Error eliminando usuario:', err);
@@ -48,8 +30,6 @@ router.delete('/usuarios/:uid', async (req, res) => {
 });
 
 // ── POST /api/admin/crear-trabajador ─────────────────────────
-// Crea un usuario en Firebase y le asigna role=trabajador
-// Body: { email, password }
 router.post('/crear-trabajador', async (req, res) => {
     const { email, password } = req.body;
 
@@ -61,14 +41,8 @@ router.post('/crear-trabajador', async (req, res) => {
     }
 
     try {
-        // 1. Crear la cuenta en Firebase Auth
-        const nuevoUsuario = await admin.auth().createUser({ email, password });
-
-        // 2. Asignar el Custom Claim de rol trabajador
-        //    Este claim estará disponible en el token JWT del usuario
-        //    y podrá verificarse en el middleware de roles
-        await admin.auth().setCustomUserClaims(nuevoUsuario.uid, { role: 'trabajador' });
-
+        const nuevoUsuario = await getAuth().createUser({ email, password });
+        await getAuth().setCustomUserClaims(nuevoUsuario.uid, { role: 'trabajador' });
         res.status(201).json({
             mensaje: 'Cuenta de trabajador creada correctamente',
             uid:     nuevoUsuario.uid,
@@ -76,7 +50,6 @@ router.post('/crear-trabajador', async (req, res) => {
         });
     } catch (err) {
         console.error('Error creando trabajador:', err);
-        // Firebase devuelve códigos de error descriptivos
         if (err.code === 'auth/email-already-exists') {
             return res.status(409).json({ error: 'Ya existe un usuario con ese email' });
         }
@@ -85,8 +58,6 @@ router.post('/crear-trabajador', async (req, res) => {
 });
 
 // ── POST /api/admin/asignar-rol ──────────────────────────────
-// Cambia el rol de un usuario existente
-// Body: { uid, role }  — role: 'usuario' | 'trabajador' | 'admin'
 router.post('/asignar-rol', async (req, res) => {
     const { uid, role } = req.body;
     const rolesValidos  = ['usuario', 'trabajador', 'admin'];
@@ -96,8 +67,8 @@ router.post('/asignar-rol', async (req, res) => {
     }
 
     try {
-        await admin.auth().setCustomUserClaims(uid, { role });
-        res.json({ mensaje: `Rol actualizado a '${role}' para el usuario ${uid}` });
+        await getAuth().setCustomUserClaims(uid, { role });
+        res.json({ mensaje: `Rol '${role}' asignado correctamente` });
     } catch (err) {
         console.error('Error asignando rol:', err);
         res.status(500).json({ error: 'Error al asignar el rol' });
