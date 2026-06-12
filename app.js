@@ -3,17 +3,24 @@ const cors    = require('cors');
 const app     = express();
 
 // ── Firebase Admin SDK ───────────────────────────────────────
-// Inicialización única — debe ir ANTES de cargar las rutas.
-// serviceAccountKey.json se descarga desde Firebase Console →
-// Configuración del proyecto → Cuentas de servicio.
-// ⚠️  Nunca subas este archivo a un repositorio público.
+// Lee las credenciales desde variable de entorno en producción
+// o desde el archivo local en desarrollo.
 const admin = require('firebase-admin');
-const serviceAccount = require('./serviceAccountKey.json');
 
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+    let credential;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        // PRODUCCIÓN (Render): credenciales en variable de entorno
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        credential = admin.credential.cert(serviceAccount);
+    } else {
+        // DESARROLLO LOCAL: archivo serviceAccountKey.json
+        const serviceAccount = require('./serviceAccountKey.json');
+        credential = admin.credential.cert(serviceAccount);
+    }
+
+    admin.initializeApp({ credential });
 }
 
 // ── Rutas ────────────────────────────────────────────────────
@@ -26,6 +33,6 @@ app.use(express.json());
 
 app.use('/api/libros',  librosRouter);
 app.use('/api/novelas', novelasRouter);
-app.use('/api/admin',   adminRouter);   // ← nuevo
+app.use('/api/admin',   adminRouter);
 
 module.exports = app;
